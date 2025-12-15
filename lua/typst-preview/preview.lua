@@ -87,14 +87,12 @@ local function update_total_page_number()
         output = target_pdf,
     })
     local cmd = table.concat(typst_cmd, " ")
-    cmd = cmd .. " << EOF\n" .. utils.get_buf_content(state.code.buf) .. "\nEOF\n"
+    cmd = cmd .. " << 'EOF'\n" .. utils.get_buf_content(state.code.buf) .. "\nEOF\n"
     cmd = cmd .. "pdfinfo " .. target_pdf .. " | grep Pages | awk '{print $2}'"
     local res = vim.system({ vim.o.shell, vim.o.shellcmdflag, cmd }):wait()
     local new_page_number = tonumber(res.stdout)
     if not new_page_number then
-        log.warn(
-            "(preview) failed to get page number:\n" .. res.stderr
-        )
+        log.warn("(preview) failed to get page number:\n" .. res.stderr)
         return
     end
     state.pages.total = new_page_number
