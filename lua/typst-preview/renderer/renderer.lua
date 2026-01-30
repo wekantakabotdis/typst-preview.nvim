@@ -100,7 +100,7 @@ function M.render(data, win_offset, img_rows, img_cols, win_height)
         quiet = 2,
         image_id = 1,
     }, data)
-    move_cursor(win_offset, math.floor((win_height - img_rows) / 2))
+    move_cursor(win_offset, 0)
 
     write_graphics({
         action = codes.action.display,

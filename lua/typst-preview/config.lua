@@ -1,5 +1,4 @@
 ---@class PreviewOpts
----@field max_width? number
 ---@field ppi? number
 ---@field position? 'left' | 'right'
 ---@field cursor_follow? boolean
@@ -14,7 +13,6 @@
 ---@field statusline? StatusLineOpts
 local default_opts = {
     preview = {
-        max_width = 80,
         ppi = 144,
         position = "right",
         cursor_follow = true,
