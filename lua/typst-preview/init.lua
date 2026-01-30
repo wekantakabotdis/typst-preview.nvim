@@ -12,6 +12,11 @@ local function setup_autocmds()
             callback = function()
                 preview.compile_and_render()
 
+                -- Sync cursor position after text changes (respects debounce in sync_with_cursor)
+                if config.get_cursor_follow() then
+                    preview.sync_with_cursor()
+                end
+
                 -- Debounce page count update
                 if page_count_timer then
                     page_count_timer:stop()

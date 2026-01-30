@@ -28,6 +28,7 @@ local state = {
     meta = {},
     cursor = {
         last_line = 0,
+        last_total_lines = 0,
         suppress = false,
     },
 }
@@ -108,7 +109,17 @@ end
 function M.update_preview_size(force)
     local img_height, img_width = utils.get_page_dimensions(preview_png)
     local page_placement = state.pages.placements[state.pages.current]
-    if force or not page_placement or page_placement.width ~= img_width or page_placement.height ~= img_height then
+
+    -- Check if we need to recalculate
+    -- Use a small tolerance (5 pixels) for dimension comparison to avoid flickering
+    local needs_update = force or not page_placement
+    if not needs_update and page_placement then
+        local width_diff = math.abs(page_placement.width - img_width)
+        local height_diff = math.abs(page_placement.height - img_height)
+        needs_update = width_diff > 5 or height_diff > 5
+    end
+
+    if needs_update then
         local rows = state.meta.win_rows
         local cols = math.ceil((state.meta.cell_height * rows * img_width) / (img_height * state.meta.cell_width))
         if cols > config.max_width then
@@ -234,12 +245,16 @@ function M.sync_with_cursor()
     local cursor_pos = vim.api.nvim_win_get_cursor(0)
     local current_line = cursor_pos[1]
 
-    -- Only trigger on line changes, not column changes
-    if current_line == state.cursor.last_line then
+    -- Get total lines in buffer (before early return check)
+    local total_lines = vim.api.nvim_buf_line_count(state.code.buf)
+
+    -- Only trigger on line changes or total line count changes
+    if current_line == state.cursor.last_line and total_lines == state.cursor.last_total_lines then
         return
     end
 
     state.cursor.last_line = current_line
+    state.cursor.last_total_lines = total_lines
 
     -- Debounce: cancel previous timer
     if cursor_timer then
@@ -247,8 +262,6 @@ function M.sync_with_cursor()
     end
 
     cursor_timer = vim.defer_fn(function()
-        -- Get total lines in buffer
-        local total_lines = vim.api.nvim_buf_line_count(state.code.buf)
         if total_lines == 0 then
             return
         end
