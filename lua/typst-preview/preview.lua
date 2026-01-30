@@ -73,10 +73,10 @@ function M.compile_and_render()
             if obj.code == 0 then
                 vim.schedule(function()
                     state.code.compiled = true
+                    M.update_total_page_number()
                     M.update_meta()
                     M.update_preview_size()
                     M.render()
-                    statusline.update(state)
                 end)
             else
                 vim.schedule(function()
@@ -105,6 +105,10 @@ function M.update_total_page_number()
         return
     end
     state.pages.total = new_page_number
+    -- If current page is now out of bounds, reset to last valid page
+    if state.pages.current > state.pages.total then
+        state.pages.current = math.max(1, state.pages.total)
+    end
     statusline.update(state)
 end
 
