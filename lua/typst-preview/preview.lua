@@ -16,6 +16,7 @@ local uv = vim.uv
 ---@field pages { total: number, current: number, placements: {
 ---width: number, height: number, rows: number, cols:number , win_offset: number }[] } width, height -> pixels | rows, cols -> cells
 ---@field meta { cell_width: number, cell_height: number, win_rows: number, win_cols: number }
+---@field cursor { last_line: number, suppress: boolean }
 local state = {
     code = {},
     preview = {},
@@ -25,6 +26,10 @@ local state = {
         placements = {},
     },
     meta = {},
+    cursor = {
+        last_line = 0,
+        suppress = false,
+    },
 }
 
 local preview_dir = vim.fn.stdpath("cache") .. "/typst_preview/"
@@ -201,6 +206,46 @@ end
 function M.close_preview()
     M.clear_preview()
     vim.api.nvim_win_close(state.preview.win, true)
+end
+
+function M.sync_with_cursor()
+    -- Prevent feedback loop
+    if state.cursor.suppress then
+        return
+    end
+
+    -- Get current cursor line
+    local cursor_pos = vim.api.nvim_win_get_cursor(0)
+    local current_line = cursor_pos[1]
+
+    -- Only trigger on line changes, not column changes
+    if current_line == state.cursor.last_line then
+        return
+    end
+
+    state.cursor.last_line = current_line
+
+    -- Get total lines in buffer
+    local total_lines = vim.api.nvim_buf_line_count(state.code.buf)
+    if total_lines == 0 then
+        return
+    end
+
+    -- Estimate which page the cursor is on
+    -- This is a simple linear approximation
+    local estimated_page = math.ceil((current_line / total_lines) * state.pages.total)
+
+    -- Clamp to valid page range
+    if estimated_page < 1 then
+        estimated_page = 1
+    elseif estimated_page > state.pages.total then
+        estimated_page = state.pages.total
+    end
+
+    -- Only change page if we moved to a different page
+    if estimated_page ~= state.pages.current then
+        M.goto_page(estimated_page)
+    end
 end
 
 return M

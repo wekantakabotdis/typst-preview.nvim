@@ -3,12 +3,21 @@ local running = false
 
 local function setup_autocmds()
     local preview = require("typst-preview.preview")
+    local config = require("typst-preview.config")
     vim.api.nvim_create_augroup("TypstPreview", {})
     require("typst-preview.utils").create_autocmds({
         {
             event = { "TextChanged", "TextChangedI" },
             callback = function()
                 preview.compile_and_render()
+            end,
+        },
+        {
+            event = { "CursorMoved" },
+            callback = function()
+                if config.get_cursor_follow() then
+                    preview.sync_with_cursor()
+                end
             end,
         },
         {
@@ -114,6 +123,21 @@ function M.refresh()
     preview.update_meta()
     preview.update_preview_size(true)
     preview.render()
+end
+
+---@param enabled boolean
+function M.set_cursor_follow(enabled)
+    require("typst-preview.config").set_cursor_follow(enabled)
+end
+
+---@return boolean
+function M.get_cursor_follow()
+    return require("typst-preview.config").get_cursor_follow()
+end
+
+function M.sync_with_cursor()
+    if not running then return end
+    require("typst-preview.preview").sync_with_cursor()
 end
 
 return M

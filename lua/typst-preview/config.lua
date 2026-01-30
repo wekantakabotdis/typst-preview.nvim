@@ -2,6 +2,7 @@
 ---@field max_width? number
 ---@field ppi? number
 ---@field position? 'left' | 'right'
+---@field cursor_follow? boolean
 
 ---@class StatusLineOpts
 ---@field enabled? boolean
@@ -16,6 +17,7 @@ local default_opts = {
         max_width = 80,
         ppi = 144,
         position = "right",
+        cursor_follow = true,
     },
     statusline = {
         enabled = true,
@@ -36,6 +38,16 @@ local M = {
 ---@param opts? ConfigOpts
 function M.setup(opts)
     M.opts = vim.tbl_deep_extend("force", M.opts, opts or {})
+end
+
+---@param enabled boolean
+function M.set_cursor_follow(enabled)
+    M.opts.preview.cursor_follow = enabled
+end
+
+---@return boolean
+function M.get_cursor_follow()
+    return M.opts.preview.cursor_follow
 end
 
 return M

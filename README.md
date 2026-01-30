@@ -60,6 +60,7 @@ require("typst-preview").setup({
         max_width = 80, -- Maximum width of the preview window (columns)
         ppi = 144, -- The PPI (pixels per inch) to use for PNG export (high value will affect the performance)
         position = "right", -- The position of the preview window relative to the code window
+        cursor_follow = true, -- Automatically jump to the page where the cursor is located
     },
     statusline = {
         enabled = true, -- Show statusline
@@ -102,16 +103,26 @@ preview.last_page()
 
 -- Refresh preview
 preview.refresh() -- in case the image shifts or the page number is wrong
+
+-- Cursor follow
+preview.set_cursor_follow(true) -- Enable cursor follow
+preview.set_cursor_follow(false) -- Disable cursor follow
+preview.get_cursor_follow() -- Check if cursor follow is enabled
+preview.sync_with_cursor() -- Manually sync preview with cursor position
 ```
 
 ## Commands
 
 | Command | Action |
 | -------------- | --------------- |
-| TypstPreviewOpen | Opens the preview |
-| TypstPreviewClose | Closes the preview |
+| TypstPreviewStart | Opens the preview |
+| TypstPreviewStop | Closes the preview |
 | TypstPreviewGoTo n| Go to page n |
 | TypstPreviewLogs | Show logs (will contain the compilation errors if any) |
+| TypstPreviewFollowCursor | Enable cursor follow |
+| TypstPreviewNoFollowCursor | Disable cursor follow |
+| TypstPreviewFollowCursorToggle | Toggle cursor follow on/off |
+| TypstPreviewSyncCursor | Manually sync preview with cursor |
 
 
 ## Open on startup
@@ -163,4 +174,4 @@ Feel free to contribute, especially if you find a way to improve the performance
 
 Big thanks to the author of [image.nvim](https://github.com/3rd/image.nvim), the image rendering is almost entirely "inspired" by their work.
 
-This plugin is basically a slightly more sophisticated version of `typst watch`, if you need more advanced features (low-latency, cursor follow, etc.) you should definitely checkout a great plugin by [chomosuke](https://github.com/chomosuke/typst-preview.nvim) and the [tinymist](https://myriad-dreamin.github.io/tinymist/feature/preview.html) language server.
+This plugin is basically a slightly more sophisticated version of `typst watch`. For lower latency and more advanced features, check out the great plugin by [chomosuke](https://github.com/chomosuke/typst-preview.nvim) and the [tinymist](https://myriad-dreamin.github.io/tinymist/feature/preview.html) language server.
