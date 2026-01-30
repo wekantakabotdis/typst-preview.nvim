@@ -85,7 +85,7 @@ function M.compile_and_render()
     end)
 end
 
-local function update_total_page_number()
+function M.update_total_page_number()
     local target_pdf = preview_dir .. "preview.pdf"
     local typst_cmd = utils.typst_compile_cmd({
         format = "pdf",
@@ -162,7 +162,22 @@ end
 
 ---@param n number
 function M.goto_page(n)
-    update_total_page_number()
+    M.update_total_page_number()
+    if n > state.pages.total then
+        n = state.pages.total
+    elseif n < 1 then
+        n = 1
+    end
+
+    if n == state.pages.current then return end
+
+    state.pages.current = n
+    M.compile_and_render()
+    statusline.update(state)
+end
+
+---@param n number
+function M.goto_page_no_update(n)
     if n > state.pages.total then
         n = state.pages.total
     elseif n < 1 then
@@ -198,7 +213,7 @@ end
 
 function M.open_preview()
     setup_preview_win()
-    update_total_page_number()
+    M.update_total_page_number()
     M.update_meta()
     M.compile_and_render()
 end
@@ -208,6 +223,7 @@ function M.close_preview()
     vim.api.nvim_win_close(state.preview.win, true)
 end
 
+local cursor_timer = nil
 function M.sync_with_cursor()
     -- Prevent feedback loop
     if state.cursor.suppress then
@@ -225,27 +241,30 @@ function M.sync_with_cursor()
 
     state.cursor.last_line = current_line
 
-    -- Get total lines in buffer
-    local total_lines = vim.api.nvim_buf_line_count(state.code.buf)
-    if total_lines == 0 then
-        return
+    -- Debounce: cancel previous timer
+    if cursor_timer then
+        cursor_timer:stop()
     end
 
-    -- Estimate which page the cursor is on
-    -- This is a simple linear approximation
-    local estimated_page = math.ceil((current_line / total_lines) * state.pages.total)
+    cursor_timer = vim.defer_fn(function()
+        -- Get total lines in buffer
+        local total_lines = vim.api.nvim_buf_line_count(state.code.buf)
+        if total_lines == 0 then
+            return
+        end
 
-    -- Clamp to valid page range
-    if estimated_page < 1 then
-        estimated_page = 1
-    elseif estimated_page > state.pages.total then
-        estimated_page = state.pages.total
-    end
+        -- Estimate which page the cursor is on
+        -- This is a simple linear approximation
+        local estimated_page = math.ceil((current_line / total_lines) * state.pages.total)
 
-    -- Only change page if we moved to a different page
-    if estimated_page ~= state.pages.current then
-        M.goto_page(estimated_page)
-    end
+        -- Clamp to valid page range
+        estimated_page = math.max(1, math.min(estimated_page, state.pages.total))
+
+        -- Only change page if we moved to a different page
+        if estimated_page ~= state.pages.current then
+            M.goto_page_no_update(estimated_page)
+        end
+    end, 150) -- 150ms debounce
 end
 
 return M

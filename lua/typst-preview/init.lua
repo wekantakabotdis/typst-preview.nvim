@@ -1,6 +1,7 @@
 local M = {}
 local running = false
 
+local page_count_timer = nil
 local function setup_autocmds()
     local preview = require("typst-preview.preview")
     local config = require("typst-preview.config")
@@ -10,6 +11,14 @@ local function setup_autocmds()
             event = { "TextChanged", "TextChangedI" },
             callback = function()
                 preview.compile_and_render()
+
+                -- Debounce page count update
+                if page_count_timer then
+                    page_count_timer:stop()
+                end
+                page_count_timer = vim.defer_fn(function()
+                    preview.update_total_page_number()
+                end, 500) -- 500ms debounce for page count
             end,
         },
         {
