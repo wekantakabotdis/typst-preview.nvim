@@ -10,6 +10,7 @@ return {
         display_delete = "d",
         display_columns = "c",
         display_rows = "r",
+        unicode_placeholder = "U",
     },
     action = {
         transmit = "t",

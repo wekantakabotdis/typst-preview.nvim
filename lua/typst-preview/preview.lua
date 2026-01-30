@@ -41,17 +41,56 @@ function M.render()
     M.update_meta()
     M.update_preview_size()
     local page_placement = state.pages.placements[state.pages.current]
-    renderer.render(
+
+    -- Get placeholder lines from renderer
+    local placeholder_lines = renderer.render(
         preview_png,
-        page_placement.win_offset,
         page_placement.rows,
-        page_placement.cols,
-        state.meta.win_rows
+        page_placement.cols
     )
+
+    -- Write placeholder text to preview buffer
+    vim.schedule(function()
+        if not vim.api.nvim_buf_is_valid(state.preview.buf) then
+            return
+        end
+
+        -- Set buffer lines with placeholder text
+        vim.api.nvim_buf_set_lines(state.preview.buf, 0, -1, false, placeholder_lines)
+
+        -- Create namespace for highlights
+        local ns_id = vim.api.nvim_create_namespace("typst_preview_placeholder")
+
+        -- Apply foreground color encoding image ID
+        -- Using guifg=#000001 to encode image_id=1
+        for i = 0, #placeholder_lines - 1 do
+            vim.api.nvim_buf_add_highlight(
+                state.preview.buf,
+                ns_id,
+                "TypstPreviewPlaceholder",
+                i,
+                0,
+                -1
+            )
+        end
+
+        -- Define highlight group with foreground color encoding image ID
+        vim.api.nvim_set_hl(0, "TypstPreviewPlaceholder", {
+            fg = "#000001",  -- Encodes image_id=1
+            ctermfg = 1
+        })
+    end)
 end
 
 function M.clear_preview()
     renderer.clear()
+
+    -- Also clear the preview buffer content
+    vim.schedule(function()
+        if vim.api.nvim_buf_is_valid(state.preview.buf) then
+            vim.api.nvim_buf_set_lines(state.preview.buf, 0, -1, false, {})
+        end
+    end)
 end
 
 ---@type vim.SystemObj?
