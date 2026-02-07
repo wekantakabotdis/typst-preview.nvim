@@ -280,6 +280,44 @@ function M.close_preview()
     vim.api.nvim_win_close(state.preview.win, true)
 end
 
+---@type vim.SystemObj?
+local query_job = nil
+
+--- Query the exact page number for a given line using typst query
+---@param line_number number The line number to query (1-indexed)
+---@param callback fun(page: number?) Callback with page number or nil on failure
+local function query_cursor_page(line_number, callback)
+    -- Cancel any in-flight query job
+    if query_job and not query_job:is_closing() then
+        query_job:kill(9)
+        query_job = nil
+    end
+
+    -- Get buffer content
+    local buf_content = utils.get_buf_content(state.code.buf)
+    local lines = vim.split(buf_content, "\n", { plain = true })
+
+    -- Insert marker after the cursor line
+    local marker = "#context [#metadata(here().page()) <__tpc__>]"
+    table.insert(lines, line_number, marker)
+    local modified_content = table.concat(lines, "\n")
+
+    -- Run typst query
+    local cmd = { "typst", "query", "-", "<__tpc__>", "--one", "--field", "value" }
+
+    query_job = vim.system(cmd, { stdin = modified_content }, function(obj)
+        vim.schedule(function()
+            if obj.code == 0 and obj.stdout then
+                local page = tonumber(vim.trim(obj.stdout))
+                callback(page)
+            else
+                -- Query failed (e.g., cursor in code block) - fallback
+                callback(nil)
+            end
+        end)
+    end)
+end
+
 local cursor_timer = nil
 function M.sync_with_cursor()
     -- Prevent feedback loop
@@ -312,17 +350,26 @@ function M.sync_with_cursor()
             return
         end
 
-        -- Estimate which page the cursor is on
-        -- This is a simple linear approximation
-        local estimated_page = math.ceil((current_line / total_lines) * state.pages.total)
+        -- Query exact page number using typst query
+        query_cursor_page(current_line, function(page)
+            local target_page
 
-        -- Clamp to valid page range
-        estimated_page = math.max(1, math.min(estimated_page, state.pages.total))
+            if page then
+                -- Use exact page from typst query
+                target_page = page
+            else
+                -- Fallback: linear approximation
+                target_page = math.ceil((current_line / total_lines) * state.pages.total)
+            end
 
-        -- Only change page if we moved to a different page
-        if estimated_page ~= state.pages.current then
-            M.goto_page_no_update(estimated_page)
-        end
+            -- Clamp to valid page range
+            target_page = math.max(1, math.min(target_page, state.pages.total))
+
+            -- Only change page if we moved to a different page
+            if target_page ~= state.pages.current then
+                M.goto_page_no_update(target_page)
+            end
+        end)
     end, 150) -- 150ms debounce
 end
 
